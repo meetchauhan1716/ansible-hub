@@ -1,0 +1,5 @@
+- name: Setup Grafana on Ubuntu
+  hosts: grafana
+  become: true
+  roles:
+    - grafana

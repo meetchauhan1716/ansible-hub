@@ -1,0 +1,40 @@
+---
+- name: Download Node Exporter tarball
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz"
+    dest: "/tmp/node_exporter-1.8.2.linux-amd64.tar.gz"
+
+- name: Extract Node Exporter tarball
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter-1.8.2.linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Move Node Exporter binary to /usr/local/bin
+  ansible.builtin.copy:
+    src: "/tmp/node_exporter-1.8.2.linux-amd64/node_exporter"
+    dest: "/usr/local/bin/node_exporter"
+    remote_src: yes
+    mode: "0755"
+
+- name: Clean up temporary files
+  ansible.builtin.file:
+    path: "/tmp/node_exporter-1.8.2.linux-amd64"
+    state: absent
+
+- name: Copy systemd service file
+  ansible.builtin.template:
+    src: "node_exporter.service.j2"
+    dest: "/etc/systemd/system/node_exporter.service"
+    mode: "0644"
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable and start Node Exporter service
+  ansible.builtin.systemd:
+    name: node_exporter
+    enabled: yes
+    state: started
+

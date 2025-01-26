@@ -1,0 +1,66 @@
+---
+# Step 1: Ensure wget and tar are installed
+- name: Ensure wget and tar are installed
+  apt:
+    name:
+      - wget
+      - tar
+    state: present
+
+# Step 2: Open port 9090 in UFW for Prometheus
+- name: Allow port 9090 in UFW for Prometheus
+  ufw:
+    rule: allow
+    port: 9090
+    proto: tcp
+
+# Step 3: Create Prometheus directories
+- name: Create Prometheus directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/prometheus
+    - /var/lib/prometheus
+
+# Step 4: Download and Extract Prometheus tarball
+- name: Download Prometheus tarball
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v2.54.1/prometheus-2.54.1.linux-amd64.tar.gz"
+    dest: /tmp/prometheus-2.54.1.linux-amd64.tar.gz
+
+- name: Extract Prometheus tarball
+  unarchive:
+    src: /tmp/prometheus-2.54.1.linux-amd64.tar.gz
+    dest: /tmp/
+    remote_src: yes
+
+# Step 5: Move Prometheus binaries and files to appropriate locations
+- name: Move Prometheus binaries and files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    remote_src: yes
+  loop:
+    - { src: "/tmp/prometheus-2.54.1.linux-amd64/prometheus", dest: "/usr/local/bin/prometheus" }
+    - { src: "/tmp/prometheus-2.54.1.linux-amd64/promtool", dest: "/usr/local/bin/promtool" }
+    - { src: "/tmp/prometheus-2.54.1.linux-amd64/consoles", dest: "/etc/prometheus/consoles" }
+    - { src: "/tmp/prometheus-2.54.1.linux-amd64/console_libraries", dest: "/etc/prometheus/console_libraries" }
+    - { src: "/tmp/prometheus-2.54.1.linux-amd64/prometheus.yml", dest: "/etc/prometheus/prometheus.yml" }
+
+# Step 6: Create the Prometheus systemd service file and reload systemd daemon
+- name: Create Prometheus systemd service file
+  template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+
+- name: Reload systemd daemon after creating Prometheus service file
+  command: systemctl daemon-reload
+
+# Step 7: Start Prometheus service
+- name: Start Prometheus service
+  systemd:
+    name: prometheus
+    state: started
+    enabled: true

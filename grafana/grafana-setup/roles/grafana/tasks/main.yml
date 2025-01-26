@@ -1,0 +1,43 @@
+- name: Add Grafana GPG key
+  apt_key:
+    url: https://packages.grafana.com/gpg.key
+    state: present
+
+- name: Add Grafana repository
+  apt_repository:
+    repo: "deb https://packages.grafana.com/oss/deb stable main"
+    state: present
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+
+- name: Start and enable Grafana service
+  service:
+    name: grafana-server
+    state: started
+    enabled: true
+
+- name: Copy Grafana configuration
+  template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart Grafana service to apply configuration changes
+  service:
+    name: grafana-server
+    state: restarted
+
+- name: Allow port 3000 in the firewall
+  ufw:
+    rule: allow
+    port: 3000
+    proto: tcp
+
+- name: Enable the firewall
+  ufw:
+    state: enabled
